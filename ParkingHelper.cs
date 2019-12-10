@@ -2,19 +2,48 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace ParkingLot
+namespace ParkingLotSimulation
 {
     internal class ParkingHelper
     {
 
+        public enum VehicleType
+        {
+            TwoWheeler = 0,
+            FourWheeler = 1,
+            HeavyVehicle = 2
+        }
+
 
         public static void ShowParkingStatus()
         {
-            foreach (ParkingLot lot in ParkingSimulation.parkingLots)
+            ParkingSimulation.ParkingSlots.Sort();
+
+            foreach (ParkingSlot slot in ParkingSimulation.ParkingSlots)
             {
-                Console.WriteLine("Parking Lot : " + lot.Id + " for "+lot.GetWheels()+" is " + (lot.Status ? "VACANT" : "OCCUPIED"));
+                Console.WriteLine("Parking Slot : " + slot.Id + " for "
+                    + slot.GetVehicleType() +
+                    " is " + (slot.IsEmpty() ? "VACANT" : "OCCUPIED")
+                    + (!slot.IsEmpty() ? " by a "
+                    + slot.GetParkedVehicleType() : ""));
             }
         }
+
+
+
+        public static int ReadData()
+        {
+            return int.Parse(Console.ReadLine());
+        }
+
+
+
+        public static void InitializeParkingLot()
+        {
+            ParkingSimulation.ParkingSlots = new List<ParkingSlot>();
+        }
+
+
 
         public static List<Ticket> GenerateTicket(List<Ticket> tickets)
         {
@@ -26,77 +55,195 @@ namespace ParkingLot
 
             Vehicle vehicle = new Vehicle(number, type);
 
-            IEnumerable<ParkingLot> slots = from lots in ParkingSimulation.parkingLots
-                                            where (vehicle.Type == lots.Type) && lots.IsEmpty()
-                                            select lots;
+            IEnumerable<ParkingSlot> EmptyParkingSlots = from slots in ParkingSimulation.ParkingSlots
+                                                         where (vehicle.Type == slots.Type) && slots.IsEmpty()
+                                                         select slots;
 
-            if (slots.Count() == 0)
+            ParkingSlot Slot;
+
+            if (EmptyParkingSlots.Count() == 0)
             {
-                Console.WriteLine("Slots Full\n");
+                Slot = ChangeSlotConfiguration(type);
+                if (Slot == null)
+                {
+                    Console.WriteLine("Slots Full");
+                    return tickets;
+                }
             }
 
-            foreach (ParkingLot lot in slots)
+            else
             {
-                lot.ParkVehicle(vehicle);
-
-                ParkingSimulation.parkingLots.Remove(ParkingSimulation.parkingLots.Where(l => l.Id == lot.Id).Single());
-                ParkingSimulation.parkingLots.Add(lot);
-
-                Ticket ticket = new Ticket();
-                ticket.AddSlot(lot.Id);
-                ticket.AddTimeIn(DateTime.Now.ToString());
-                ticket.AddId(tickets.Count());
-
-                tickets.Add(ticket);
-
-                break;
+                Slot = EmptyParkingSlots.First();
             }
+
+            Slot.ParkVehicle(vehicle);
+
+            return IssueTicket(tickets, Slot);
+        }
+
+
+
+        public static List<Ticket> IssueTicket(List<Ticket> tickets, ParkingSlot Slot)
+        {
+            Ticket ticket = new Ticket();
+            ticket.AddSlot(Slot.Id);
+            ticket.AddTimeIn(DateTime.Now.ToString());
+            ticket.AddId(tickets.Count());
+
+            tickets.Add(ticket);
+
             return tickets;
         }
 
-        public static List<Ticket> RevokeTicket(List<Ticket> tickets)
+
+
+
+
+
+        public static List<Ticket> RevokeTicketWithTicketID(List<Ticket> tickets)
         {
             Console.WriteLine("Ticket ID : ");
-            int id = int.Parse(Console.ReadLine());
+            int id = ReadData();
 
-            IEnumerable<Ticket> ticket = from receipt in tickets
-                                         where receipt.Id == id
-                                         select receipt;
+            Ticket ticket;
 
-            Ticket t = ticket.Single();
+            try
+            {
+                ticket = (from receipt in tickets
+                          where receipt.Id == id
+                          select receipt).Single();
+            }
 
-            t.AddTimeOut(DateTime.Now.ToString());
-            
-            IEnumerable<ParkingLot> parkingLot = from park in ParkingSimulation.parkingLots
-                                                 where park.Id == t.Slot
-                                                 select park;
+            catch (Exception)
+            {
+                Console.WriteLine("Invalid Entry");
+                return tickets;
+            }
 
-            ParkingLot parking = parkingLot.First();
-                                    
-            ParkingSimulation.parkingLots.Remove(parking);
+            ticket.AddTimeOut(DateTime.Now.ToString());
 
-            parking.UnparkVehicle();
+            ParkingSlot parkingSlot = (from park in ParkingSimulation.ParkingSlots
+                                       where park.Id == ticket.Slot
+                                       select park).Single();
 
-            ParkingSimulation.parkingLots.Add(parking);
+            parkingSlot.UnparkVehicle();
 
             return tickets;
         }
 
-        public static void PrintTicket(List<Ticket> ticketList)
+
+
+
+
+
+
+        public static void PrintTicket(List<Ticket> TicketList)
         {
-            
-            foreach(Ticket t in ticketList)
-            {
+            Console.WriteLine();
+
+            Ticket t = TicketList[TicketList.Count() - 1];
+
+                Console.WriteLine("___________________________________");
                 Console.WriteLine("Ticket ID # : " + t.Id);
                 Console.WriteLine("In Time : " + t.InTime);
                 Console.WriteLine("Out Time : " + t.OutTime);
                 Console.WriteLine("Parking Lot # : " + t.Slot);
                 Console.WriteLine(t.OutTime.Length > 1 ? "INACTIVE" : "ACTIVE");
+                Console.WriteLine("___________________________________");
                 Console.WriteLine();
-            }
-
+            
         }
 
+
+
+
+
+
+        public static List<Ticket> RevokeTicketWithVehicleNumber(List<Ticket> tickets)
+        {
+            Console.WriteLine("Vehicle Number : ");
+            int number = int.Parse(Console.ReadLine());
+
+
+            ParkingSlot parkingSlot = (from slots in ParkingSimulation.ParkingSlots
+                                       where slots.Vehicle.Number == number
+                                       select slots)
+                                       .Single();
+
+            Ticket ticket = (from ticketValue in tickets
+                             where ticketValue.Slot == parkingSlot.Id
+                             select ticketValue)
+                             .Single();
+
+            ticket.AddTimeOut(DateTime.Now.ToString());
+
+            parkingSlot.UnparkVehicle();
+
+            return tickets;
+        }
+
+
+
+
+
+        public static int RevokeMenu()
+        {
+            Console.WriteLine();
+            Console.WriteLine("1. Through Ticket ID");
+            Console.WriteLine("2. Through Vehicle Number");
+            int choice = ReadData();
+
+            return choice;
+        }
+
+
+
+
+
+        public static ParkingSlot ChangeSlotConfiguration(int VehicleConfiguration)
+        {
+            IEnumerable<ParkingSlot> ParkingSlots;
+            ParkingSlot Slot = null;
+
+
+            switch (VehicleConfiguration)
+            {
+                case (int)VehicleType.HeavyVehicle:
+                    Console.WriteLine("Regret! Slots Full");
+                    break;
+
+                case (int)VehicleType.FourWheeler:
+                    ParkingSlots = from slots in ParkingSimulation.ParkingSlots
+                                   where (slots.Type == (int)VehicleType.HeavyVehicle) && slots.IsEmpty()
+                                   select slots;
+                    if (ParkingSlots.Count() == 0)
+                    {
+                        Console.WriteLine("Regret! Slots Full");
+                    }
+                    else
+                    {
+                        Slot = ParkingSlots.First();
+                    }
+                    break;
+                case (int)VehicleType.TwoWheeler:
+                    ParkingSlots = from slots in ParkingSimulation.ParkingSlots
+                                   where (slots.Type == (int)VehicleType.FourWheeler || slots.Type == (int)VehicleType.HeavyVehicle) && slots.IsEmpty()
+                                   select slots;
+                    if (ParkingSlots.Count() == 0)
+                    {
+                        Console.WriteLine("Regret! Slots Full");
+                    }
+                    else
+                    {
+                        Slot = ParkingSlots.First();
+                    }
+
+                    break;
+
+            }
+
+            return Slot;
+        }
 
     }
 }

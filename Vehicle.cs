@@ -1,4 +1,4 @@
-﻿namespace ParkingLot
+﻿namespace ParkingLotSimulation
 {
     internal class Vehicle
     {
@@ -12,7 +12,6 @@
         public int Number { get; set; }
 
         public int Type { get; set; }
-
 
     }
 }

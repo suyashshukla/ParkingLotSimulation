@@ -1,53 +1,57 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 
-namespace ParkingLot
+namespace ParkingLotSimulation
 {
     internal class ParkingSimulation
     {
 
-        public enum VehicleType
-        {
-            TWO = 0,
-            FOUR = 1
-        }
 
-        public static List<ParkingLot> parkingLots;
+        public static List<ParkingSlot> ParkingSlots;
 
         private static void Main(string[] args)
         {
 
-            Console.WriteLine("Two Wheeler Parking Lots : ");
-            int M = int.Parse(Console.ReadLine());
+            Console.WriteLine("Two Wheeler Parking Slots : ");
+            int TwoWheelerParkingSlots = ParkingHelper.ReadData();
 
-            Console.WriteLine("Four Wheeler Parking Lots : ");
-            int N = int.Parse(Console.ReadLine());
+            Console.WriteLine("Four Wheeler Parking Slots : ");
+            int FourWheelerParkingSlots = ParkingHelper.ReadData();
 
-            parkingLots = new List<ParkingLot>();
-            List<Ticket> tickets = new List<Ticket>();
+            Console.WriteLine("Heavy Vehicle Parking Slots : ");
+            int HeavyVehicleParkingSlots = ParkingHelper.ReadData();
 
-            for (int i = 0; i < M; i++)
+            ParkingHelper.InitializeParkingLot();
+
+            List<Ticket> Tickets = new List<Ticket>();
+
+
+            for (int i = 0; i < TwoWheelerParkingSlots; i++)
             {
-                ParkingLot parking = new ParkingLot((int)VehicleType.TWO, (i + 1));
+                ParkingSlot ParkingSlot = new ParkingSlot((int)ParkingHelper.VehicleType.TwoWheeler, (i + 1));
 
-                parkingLots.Add(parking);
+                ParkingSlots.Add(ParkingSlot);
             }
 
-            for (int i = 0; i < N; i++)
+            for (int i = 0; i < FourWheelerParkingSlots; i++)
             {
-                ParkingLot parking = new ParkingLot((int)VehicleType.FOUR, (M + i + 1));
+                ParkingSlot ParkingSlot = new ParkingSlot((int)ParkingHelper.VehicleType.FourWheeler, (TwoWheelerParkingSlots + i + 1));
 
-                parkingLots.Add(parking);
+                ParkingSlots.Add(ParkingSlot);
             }
 
+            for (int i = 0; i < HeavyVehicleParkingSlots; i++)
+            {
+                ParkingSlot ParkingSlot = new ParkingSlot((int)ParkingHelper.VehicleType.HeavyVehicle, (TwoWheelerParkingSlots + FourWheelerParkingSlots + i + 1));
+
+                ParkingSlots.Add(ParkingSlot);
+            }
+            
 
             while (true)
             {
-
                 ParkingHelper.ShowParkingStatus();
-
-
+                
                 Console.WriteLine();
                 Console.WriteLine("1. PARK Vehicle");
                 Console.WriteLine("2. UNPARK Vehicle");
@@ -60,18 +64,25 @@ namespace ParkingLot
 
                 if (choice == 1)
                 {
-                    tickets = ParkingHelper.GenerateTicket(tickets);
-                    Console.WriteLine("********************************************");
-                    ParkingHelper.PrintTicket(tickets);
-                    Console.WriteLine("********************************************");
+                    Tickets = ParkingHelper.GenerateTicket(Tickets);
+                    ParkingHelper.PrintTicket(Tickets);
                 }
 
                 else if (choice == 2)
                 {
-                    tickets = ParkingHelper.RevokeTicket(tickets);
-                    Console.WriteLine("********************************************");
-                    ParkingHelper.PrintTicket(tickets);
-                    Console.WriteLine("********************************************");
+
+                    switch (ParkingHelper.RevokeMenu())
+                    {
+                        case 1:
+                            Tickets = ParkingHelper.RevokeTicketWithTicketID(Tickets);
+                            break;
+
+                        case 2:
+                            Tickets = ParkingHelper.RevokeTicketWithVehicleNumber(Tickets); ;
+                            break;
+                    }
+
+                    ParkingHelper.PrintTicket(Tickets);
                 }
 
                 else

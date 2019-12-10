@@ -1,4 +1,4 @@
-﻿namespace ParkingLot
+﻿namespace ParkingLotSimulation
 {
     internal class Ticket
     {
